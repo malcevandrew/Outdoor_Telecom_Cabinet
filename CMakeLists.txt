@@ -34,7 +34,9 @@ enable_language(C ASM)
 # Create an executable object type
 add_executable(${CMAKE_PROJECT_NAME}
     App/app_main.c
-    App/app_main.h)
+    App/app_main.h
+    App/Services/analog_input.h
+    App/Services/analog_input.c)
 
 # Add STM32CubeMX generated sources
 add_subdirectory(cmake/stm32cubemx)

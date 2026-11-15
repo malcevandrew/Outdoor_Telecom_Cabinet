@@ -36,7 +36,15 @@ add_executable(${CMAKE_PROJECT_NAME}
     App/app_main.c
     App/app_main.h
     App/Services/analog_input.h
-    App/Services/analog_input.c)
+    App/Services/analog_input.c
+    App/Drivers/aht20.h
+    App/Drivers/aht20.c
+    App/Drivers/bmp280.h
+    App/Drivers/bmp280.c
+    App/Drivers/ina219.h
+    App/Drivers/ina219.c
+    App/Drivers/lcd1602.h
+    App/Drivers/lcd1602.c)
 
 # Add STM32CubeMX generated sources
 add_subdirectory(cmake/stm32cubemx)

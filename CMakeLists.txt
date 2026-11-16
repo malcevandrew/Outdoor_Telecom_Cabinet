@@ -44,7 +44,9 @@ add_executable(${CMAKE_PROJECT_NAME}
     App/Drivers/ina219.h
     App/Drivers/ina219.c
     App/Drivers/lcd1602.h
-    App/Drivers/lcd1602.c)
+    App/Drivers/lcd1602.c
+    App/Drivers/rc522.h
+    App/Drivers/rc522.c)
 
 # Add STM32CubeMX generated sources
 add_subdirectory(cmake/stm32cubemx)

@@ -7,6 +7,7 @@
 #include "bmp280.h"
 #include "ina219.h"
 #include "lcd1602.h"
+#include "rc522.h"
 #include <stdio.h>
 
 
@@ -23,6 +24,7 @@ static aht20_t aht20;
 static bmp280_t bmp280;
 static ina219_t ina219;
 static lcd1602_t lcd;
+static rc522_t rc522;
 
 
 void App_Init(void)
@@ -46,6 +48,12 @@ void App_Init(void)
     LCD1602_Init(&lcd, &hi2c1);
     LCD1602_SetLine(&lcd, 0, "OTC ver. 0.1");
     LCD1602_SetLine(&lcd, 1, " Initialization ");
+
+    if (RC522_Init(&rc522, &hspi1, GPIOA, GPIO_PIN_4, GPIOB, GPIO_PIN_0)) {
+        printf("[RFID] RC522 initialized successfully.\r\n");
+    } else {
+        printf("[RFID] ERROR: RC522 not detected on SPI1!\r\n");
+    }
 }
 
 
@@ -56,6 +64,7 @@ static uint32_t last_aht20_proc_ms  = 0;
 static uint32_t last_bmp280_proc_ms  = 0;
 static uint32_t last_ina219_proc_ms  = 0;
 static uint32_t last_lcd_proc_ms  = 0;
+static uint32_t last_rc522_proc_ms  = 0;
 
 
 void App_Loop(void)
@@ -95,7 +104,17 @@ void App_Loop(void)
     // Обновление дисплея (раз в 10 мс)
     if ((now - last_lcd_proc_ms) >= 10U) {
         last_lcd_proc_ms = now;
-        LCD1602_Process(&lcd);;
+        LCD1602_Process(&lcd);
+    }
+
+    // Проверка карты (раз в 200 мс)
+    if ((now - last_rc522_proc_ms) >= 200U) {
+        last_rc522_proc_ms = now;
+
+        uint8_t uid[4] = {0};
+        if (RC522_PollCard(&rc522, uid)) {
+            printf("[RFID] Card detected! UID: %02X %02X %02X %02X\r\n", uid[0], uid[1], uid[2], uid[3]);
+        } 
     }
 
 

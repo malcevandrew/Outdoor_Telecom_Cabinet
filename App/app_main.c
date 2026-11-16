@@ -8,6 +8,10 @@
 #include "ina219.h"
 #include "lcd1602.h"
 #include "rc522.h"
+
+#include "dew_point.h"
+#include "climate_ctrl.h"
+
 #include <stdio.h>
 
 
@@ -19,13 +23,12 @@ int _write(int file, char *ptr, int len)
     return len;
 }
 
-
+static analog_data_t adc;
 static aht20_t aht20;
 static bmp280_t bmp280;
 static ina219_t ina219;
 static lcd1602_t lcd;
 static rc522_t rc522;
-
 
 void App_Init(void)
 {
@@ -42,7 +45,7 @@ void App_Init(void)
 
     INA219_Init(&ina219, &hi2c1);
 
-    AnalogInput_Init();
+    AnalogInput_Init(&adc);
     printf("[ADC] Circular DMA scan started.\r\n");
 
     LCD1602_Init(&lcd, &hi2c1);
@@ -54,6 +57,8 @@ void App_Init(void)
     } else {
         printf("[RFID] ERROR: RC522 not detected on SPI1!\r\n");
     }
+
+    ClimateCtrl_Init();
 }
 
 
@@ -74,7 +79,7 @@ void App_Loop(void)
     // Фильтрация и расчёт аналоговых данных (раз в 50 мс)
     if ((now - last_adc_proc_ms) >= 50U) {
         last_adc_proc_ms = now;
-        AnalogInput_Process();
+        AnalogInput_Process(&adc);
     }
 
     // Измерение температуры на AHT20 (раз в 200 мс)
@@ -117,13 +122,15 @@ void App_Loop(void)
         } 
     }
 
+    dew_point_result_t dew = DewPoint_Calculate(aht20.temperature_c, aht20.is_valid, aht20.humidity_rh, adc.surface_temp_c, adc.is_valid);
+    ClimateCtrl_Update(aht20.temperature_c, aht20.is_valid, adc.fan_setpoint_c, &dew);
+
 
     // Вывод диагностики в UART (раз в 2000 мс)
     if ((now - last_print_ms) >= 2000U) {
         last_print_ms = now;
 
-        analog_data_t adc = AnalogInput_GetData();
-        
+
         if (adc.is_valid) {
             printf("[ADC] Surface: %.2f C (%.3f V, raw=%u) | Fan Setpoint: %.1f C (raw=%u)\r\n",
                    adc.surface_temp_c, adc.surface_voltage_v, adc.raw_temp_ch,
@@ -140,7 +147,6 @@ void App_Loop(void)
             printf("[AHT20] ERROR: Sensor offline!\r\n");
         }
 
-
         if (bmp280.is_valid) {
             printf("[BMP280] Pressure: %.1f hPa (%.1f mmHg)\r\n",
             bmp280.pressure_hpa, bmp280.pressure_mmhg);
@@ -153,7 +159,11 @@ void App_Loop(void)
            ina219.bus_voltage_v, ina219.current_ma, ina219.power_mw);
         } else {
             printf("[INA219] ERROR: Sensor offline!\r\n");
-        }       
+        }  
+        
+        printf("\r\n");
+        printf("--------------------------------------------\r\n");
+        printf("\r\n");
 
     }
 }

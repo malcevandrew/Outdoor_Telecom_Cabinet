@@ -46,7 +46,15 @@ add_executable(${CMAKE_PROJECT_NAME}
     App/Drivers/lcd1602.h
     App/Drivers/lcd1602.c
     App/Drivers/rc522.h
-    App/Drivers/rc522.c)
+    App/Drivers/rc522.c
+    App/Application/climate_ctrl.h
+    App/Application/climate_ctrl.c
+    App/Application/access_ctrl.h
+    App/Application/access_ctrl.c
+    App/Application/ui_ctrl.h
+    App/Application/ui_ctrl.c
+    App/Services/dew_point.h
+    App/Services/dew_point.c)
 
 # Add STM32CubeMX generated sources
 add_subdirectory(cmake/stm32cubemx)

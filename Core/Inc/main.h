@@ -63,15 +63,15 @@ void Error_Handler(void);
 #define RFID_CS_GPIO_Port GPIOA
 #define RFID_RST_Pin GPIO_PIN_0
 #define RFID_RST_GPIO_Port GPIOB
-#define DOOR_BUTTON_Pin GPIO_PIN_1
-#define DOOR_BUTTON_GPIO_Port GPIOB
-#define DOOR_BUTTON_EXTI_IRQn EXTI1_IRQn
+#define DOOR_REED_Pin GPIO_PIN_1
+#define DOOR_REED_GPIO_Port GPIOB
+#define DOOR_REED_EXTI_IRQn EXTI1_IRQn
 #define RELAY_HEAT_Pin GPIO_PIN_10
 #define RELAY_HEAT_GPIO_Port GPIOB
-#define BUZZER_Pin GPIO_PIN_12
-#define BUZZER_GPIO_Port GPIOB
 #define UI_BUTTON_Pin GPIO_PIN_13
 #define UI_BUTTON_GPIO_Port GPIOB
+#define BUZZER_Pin GPIO_PIN_8
+#define BUZZER_GPIO_Port GPIOA
 
 /* USER CODE BEGIN Private defines */
 

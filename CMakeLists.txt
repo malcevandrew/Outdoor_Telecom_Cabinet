@@ -34,7 +34,31 @@ enable_language(C ASM)
 # Create an executable object type
 add_executable(${CMAKE_PROJECT_NAME}
     App/app_main.c
-    App/app_main.h)
+    App/app_main.h
+    App/Services/analog_input.h
+    App/Services/analog_input.c
+    App/Drivers/aht20.h
+    App/Drivers/aht20.c
+    App/Drivers/bmp280.h
+    App/Drivers/bmp280.c
+    App/Drivers/ina219.h
+    App/Drivers/ina219.c
+    App/Drivers/lcd1602.h
+    App/Drivers/lcd1602.c
+    App/Drivers/rc522.h
+    App/Drivers/rc522.c
+    App/Application/climate_ctrl.h
+    App/Application/climate_ctrl.c
+    App/Application/access_ctrl.h
+    App/Application/access_ctrl.c
+    App/Application/ui_ctrl.h
+    App/Application/ui_ctrl.c
+    App/Services/dew_point.h
+    App/Services/dew_point.c
+    App/Services/logger.h
+    App/Services/logger.c
+    App/Application/alarm_ctrl.h
+    App/Application/alarm_ctrl.c)
 
 # Add STM32CubeMX generated sources
 add_subdirectory(cmake/stm32cubemx)

@@ -68,10 +68,10 @@ void Error_Handler(void);
 #define DOOR_REED_EXTI_IRQn EXTI1_IRQn
 #define RELAY_HEAT_Pin GPIO_PIN_10
 #define RELAY_HEAT_GPIO_Port GPIOB
-#define BUZZER_Pin GPIO_PIN_12
-#define BUZZER_GPIO_Port GPIOB
 #define UI_BUTTON_Pin GPIO_PIN_13
 #define UI_BUTTON_GPIO_Port GPIOB
+#define BUZZER_Pin GPIO_PIN_8
+#define BUZZER_GPIO_Port GPIOA
 
 /* USER CODE BEGIN Private defines */
 

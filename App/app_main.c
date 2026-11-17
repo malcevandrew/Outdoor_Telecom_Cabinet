@@ -26,7 +26,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 static system_telemetry_t sys = {0};        // Общая телеметрия
 static dew_point_result_t sys_dew = {0};    // Результат расчета точки росы
 
-// Экземпляры внешних устройств
+// Внешние устройств
 static aht20_t aht20;
 static bmp280_t bmp280;
 static ina219_t ina219;
@@ -43,7 +43,7 @@ void App_Init(void)
     UICtrl_Init();    
     AlarmCtrl_Init();
 
-    // Привязываем постоянные указатели на структуры данных
+    // Привязываем указатели к структуре общей телеметрии sys
     sys.aht20   = &aht20;
     sys.bmp280  = &bmp280;
     sys.ina219  = &ina219;
@@ -79,21 +79,22 @@ void App_Loop(void)
     if ((now - t_50ms) >= 50U) {
         t_50ms = now;
 
-        // Фиксация текущих значений АЦП
+        // Определение текущих значений АЦП
         AnalogInput_Process();
 
         // Проверка карты при открытии дверцы шкафа
         AccessCtrl_Update(&rc522);
 
         // Расчет точки росы на основе измерений датчиков
-        sys_dew = DewPoint_Calculate(aht20.temperature_c, aht20.is_valid, aht20.humidity_rh, sys.analog->surface_temp_c, sys.analog->is_valid);
+        sys_dew = DewPoint_Calculate(aht20.temperature_c, aht20.is_valid, aht20.humidity_rh,
+                                     sys.analog->surface_temp_c, sys.analog->is_valid);
 
-        // Контроль климата. При необходимости включаем кулер или нагреватель
+        // Контроль климата. При необходимости включение кулера или нагревателя
         ClimateCtrl_Update(aht20.temperature_c, aht20.is_valid, sys.analog->fan_setpoint_c, &sys_dew);
         
-        // Обновляем динамические флаги состояния        
-        sys.access_alarm = (sys.access->state == ACCESS_STATE_ALARM);                        // Дверца открыта без идентификации
-        sys.dew_critical = (sys_dew.is_valid && sys_dew.risk == CONDENSATION_RISK_CRITICAL); // Близка точка росы        
+        // Обновление динамических флагов о наличии внештатной ситуации        
+        sys.access_alarm = (sys.access->state == ACCESS_STATE_ALARM);                        // Дверца открыта без последующей идентификации
+        sys.dew_critical = (sys_dew.is_valid && sys_dew.risk == CONDENSATION_RISK_CRITICAL); // Критически близка точка росы        
         sys.sensor_fault = (!aht20.is_valid || !bmp280.is_valid ||  !ina219.is_valid ||      // Один из датчиков вышел из строя
                                           !sys.analog->is_valid || !rc522.is_valid);
 
@@ -112,12 +113,12 @@ void App_Loop(void)
         INA219_Process(&ina219);    // Датчик напряжения, потребляемого тока и мощность нагрузки (оборудования в шкафу)
     }
 
-    // Каждые 500 мс: барометр и Heartbeat LED
+    // Каждые 500 мс: барометр и Heartbeat
     if ((now - t_500ms) >= 500U) {
         t_500ms = now;
 
-        BMP280_Process(&bmp280);    // Датчик атмосферного давления
-        HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); // Светодиод PA13 (Heartbeat)
+        BMP280_Process(&bmp280);    
+        HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); 
     }
 
     // Каждые 2000 мс: вывод диагностики в UART

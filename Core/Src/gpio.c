@@ -60,7 +60,7 @@ void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(RFID_RST_GPIO_Port, RFID_RST_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, RELAY_HEAT_Pin|BUZZER_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(RELAY_HEAT_GPIO_Port, RELAY_HEAT_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : HEARTBEAT_Pin */
   GPIO_InitStruct.Pin = HEARTBEAT_Pin;
@@ -76,8 +76,8 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(RFID_CS_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : RFID_RST_Pin RELAY_HEAT_Pin BUZZER_Pin */
-  GPIO_InitStruct.Pin = RFID_RST_Pin|RELAY_HEAT_Pin|BUZZER_Pin;
+  /*Configure GPIO pins : RFID_RST_Pin RELAY_HEAT_Pin */
+  GPIO_InitStruct.Pin = RFID_RST_Pin|RELAY_HEAT_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;

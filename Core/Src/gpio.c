@@ -83,11 +83,11 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : DOOR_BUTTON_Pin */
-  GPIO_InitStruct.Pin = DOOR_BUTTON_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
-  GPIO_InitStruct.Pull = GPIO_PULLUP;
-  HAL_GPIO_Init(DOOR_BUTTON_GPIO_Port, &GPIO_InitStruct);
+  /*Configure GPIO pin : DOOR_REED_Pin */
+  GPIO_InitStruct.Pin = DOOR_REED_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
+  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+  HAL_GPIO_Init(DOOR_REED_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : UI_BUTTON_Pin */
   GPIO_InitStruct.Pin = UI_BUTTON_Pin;

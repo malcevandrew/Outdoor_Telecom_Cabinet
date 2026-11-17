@@ -20,7 +20,7 @@ typedef struct {
 
 void ClimateCtrl_Init(void);
 void ClimateCtrl_Update(float air_temp_c, bool air_valid, float fan_setpoint_c, const dew_point_result_t *dew_res);
-climate_status_t ClimateCtrl_GetStatus(void);
+const climate_status_t *ClimateCtrl_GetStatus(void);
 
 #ifdef __cplusplus
 }

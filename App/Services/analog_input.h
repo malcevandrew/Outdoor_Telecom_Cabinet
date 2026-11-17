@@ -17,8 +17,9 @@ typedef struct {
     bool is_valid;              // Флаг достоверности канала температуры 
 } analog_data_t;
 
-void AnalogInput_Init(analog_data_t *current_data);
-void AnalogInput_Process(analog_data_t *current_data);
+void AnalogInput_Init(void);
+void AnalogInput_Process(void);
+const analog_data_t *AnalogInput_GetData(void);
 
 #ifdef __cplusplus
 }

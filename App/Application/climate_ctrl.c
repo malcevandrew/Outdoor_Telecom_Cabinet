@@ -133,7 +133,7 @@ void ClimateCtrl_Update(float air_temp_c,                   // Температ�
     SetHeaterRelay(need_heat);
 }
 
-climate_status_t ClimateCtrl_GetStatus(void)
+const climate_status_t *ClimateCtrl_GetStatus(void)
 {
-    return status;
+    return &status;
 }

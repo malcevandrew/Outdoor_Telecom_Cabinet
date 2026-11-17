@@ -2,28 +2,31 @@
 #include "main.h"
 #include "usart.h"
 #include "i2c.h"
-#include "analog_input.h"
+#include "spi.h"
+
 #include "aht20.h"
 #include "bmp280.h"
 #include "ina219.h"
 #include "lcd1602.h"
 #include "rc522.h"
 
-#include "dew_point.h"
-#include "climate_ctrl.h"
+#include "ui_ctrl.h"
+#include "logger.h"
+#include "alarm_ctrl.h"
 
 #include <stdio.h>
 
-
-// Перенаправление стандартного вывода printf в USART1
-int _write(int file, char *ptr, int len)
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
-    (void)file; // Не выводить unused variable
-    HAL_UART_Transmit(&huart1, (uint8_t *)ptr, (uint16_t)len, 100);
-    return len;
+    if (GPIO_Pin == GPIO_PIN_1) {
+        AccessCtrl_OnDoorExti();
+    }
 }
 
-static analog_data_t adc;
+static system_telemetry_t sys = {0};        // Общая телеметрия
+static dew_point_result_t sys_dew = {0};    // Результат расчета точки росы
+
+// Экземпляры внешних устройств
 static aht20_t aht20;
 static bmp280_t bmp280;
 static ina219_t ina219;
@@ -32,138 +35,96 @@ static rc522_t rc522;
 
 void App_Init(void)
 {
-    printf("\r\n=== Telecom Cabinet Controller v1.0 ===\r\n");
-    printf("[SYS] System initialized. Clock: %lu Hz\r\n", HAL_RCC_GetHCLKFreq());
+    Logger_Init();
 
-    AHT20_Init(&aht20, &hi2c1);
-
-    if (BMP280_Init(&bmp280, &hi2c1)) {
-        printf("[BMP280] Initialized successfully.\r\n");
-    } else {
-        printf("[BMP280] ERROR: Init failed!\r\n");
-    }
-
-    INA219_Init(&ina219, &hi2c1);
-
-    AnalogInput_Init(&adc);
-    printf("[ADC] Circular DMA scan started.\r\n");
-
-    LCD1602_Init(&lcd, &hi2c1);
-    LCD1602_SetLine(&lcd, 0, "OTC ver. 0.1");
-    LCD1602_SetLine(&lcd, 1, " Initialization ");
-
-    if (RC522_Init(&rc522, &hspi1, GPIOA, GPIO_PIN_4, GPIOB, GPIO_PIN_0)) {
-        printf("[RFID] RC522 initialized successfully.\r\n");
-    } else {
-        printf("[RFID] ERROR: RC522 not detected on SPI1!\r\n");
-    }
-
+    AnalogInput_Init();
     ClimateCtrl_Init();
+    AccessCtrl_Init();
+    UICtrl_Init();    
+    AlarmCtrl_Init();
+
+    // Привязываем постоянные указатели на структуры данных
+    sys.aht20   = &aht20;
+    sys.bmp280  = &bmp280;
+    sys.ina219  = &ina219;
+    sys.analog  = AnalogInput_GetData();
+    sys.dew     = &sys_dew;
+    sys.climate = ClimateCtrl_GetStatus();
+    sys.access  = AccessCtrl_GetStatus();
+
+    // Инициализация внешних устройств
+    bool aht_ok = AHT20_Init(&aht20, &hi2c1);
+    bool bmp_ok = BMP280_Init(&bmp280, &hi2c1);
+    bool ina_ok = INA219_Init(&ina219, &hi2c1);
+    bool lcd_ok = LCD1602_Init(&lcd, &hi2c1);
+    bool rfd_ok = RC522_Init(&rc522, &hspi1, GPIOA, GPIO_PIN_4, GPIOB, GPIO_PIN_0);
+
+    LOG_INFO("Init status - AHT20:%d BMP280:%d INA219:%d LCD:%d RC522:%d", aht_ok, bmp_ok, ina_ok, lcd_ok, rfd_ok);
 }
-
-
-static uint32_t last_heartbeat_ms = 0;
-static uint32_t last_adc_proc_ms  = 0;
-static uint32_t last_print_ms     = 0;
-static uint32_t last_aht20_proc_ms  = 0;
-static uint32_t last_bmp280_proc_ms  = 0;
-static uint32_t last_ina219_proc_ms  = 0;
-static uint32_t last_lcd_proc_ms  = 0;
-static uint32_t last_rc522_proc_ms  = 0;
 
 
 void App_Loop(void)
 {
+    static uint32_t t_50ms  = 0;
+    static uint32_t t_200ms = 0;
+    static uint32_t t_500ms = 0;
+    static uint32_t t_2000ms = 0;
+
     uint32_t now = HAL_GetTick();
 
-    // Фильтрация и расчёт аналоговых данных (раз в 50 мс)
-    if ((now - last_adc_proc_ms) >= 50U) {
-        last_adc_proc_ms = now;
-        AnalogInput_Process(&adc);
-    }
+    // Каждый такт: если содержимое дисплея нужно изменить, то обновляем по 1 символу на каждое выполнение функции
+    LCD1602_Process(&lcd);
 
-    // Измерение температуры на AHT20 (раз в 200 мс)
-    if ((now - last_aht20_proc_ms) >= 200U) {
-        last_aht20_proc_ms = now;
-        AHT20_Process(&aht20);
-    }
+    // Каждые 50 мс: АЦП, контроль доступа, контроль климата, UI и расчет флагов аварий 
+    if ((now - t_50ms) >= 50U) {
+        t_50ms = now;
 
-    // Heartbeat на светодиоде PC13 (раз в 500 мс)
-    if ((now - last_heartbeat_ms) >= 500U) {
-        last_heartbeat_ms = now;
-        HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-    }
+        // Фиксация текущих значений АЦП
+        AnalogInput_Process();
 
-    // Измерение атмосферного давления на BMP280 (раз в 500 мс)
-    if ((now - last_bmp280_proc_ms) >= 500U) {
-        last_bmp280_proc_ms = now;
-        BMP280_Process(&bmp280);
-    }
+        // Проверка карты при открытии дверцы шкафа
+        AccessCtrl_Update(&rc522);
 
-    // Измерение тока и мощности нагрузки на INA219 (раз в 200 мс)
-    if ((now - last_ina219_proc_ms) >= 200U) {
-        last_ina219_proc_ms = now;
-        INA219_Process(&ina219);
-    }
+        // Расчет точки росы на основе измерений датчиков
+        sys_dew = DewPoint_Calculate(aht20.temperature_c, aht20.is_valid, aht20.humidity_rh, sys.analog->surface_temp_c, sys.analog->is_valid);
 
-    // Обновление дисплея (раз в 10 мс)
-    if ((now - last_lcd_proc_ms) >= 10U) {
-        last_lcd_proc_ms = now;
-        LCD1602_Process(&lcd);
-    }
-
-    // Проверка карты (раз в 200 мс)
-    if ((now - last_rc522_proc_ms) >= 200U) {
-        last_rc522_proc_ms = now;
-
-        uint8_t uid[4] = {0};
-        if (RC522_PollCard(&rc522, uid)) {
-            printf("[RFID] Card detected! UID: %02X %02X %02X %02X\r\n", uid[0], uid[1], uid[2], uid[3]);
-        } 
-    }
-
-    dew_point_result_t dew = DewPoint_Calculate(aht20.temperature_c, aht20.is_valid, aht20.humidity_rh, adc.surface_temp_c, adc.is_valid);
-    ClimateCtrl_Update(aht20.temperature_c, aht20.is_valid, adc.fan_setpoint_c, &dew);
-
-
-    // Вывод диагностики в UART (раз в 2000 мс)
-    if ((now - last_print_ms) >= 2000U) {
-        last_print_ms = now;
-
-
-        if (adc.is_valid) {
-            printf("[ADC] Surface: %.2f C (%.3f V, raw=%u) | Fan Setpoint: %.1f C (raw=%u)\r\n",
-                   adc.surface_temp_c, adc.surface_voltage_v, adc.raw_temp_ch,
-                   adc.fan_setpoint_c, adc.raw_setpoint_ch);
-        } else {
-            printf("[ADC] ERROR: Surface sensor is broken (raw=%u, %.3f V)\r\n",
-                   adc.raw_temp_ch, adc.surface_voltage_v);
-        }
-
-        if (aht20.is_valid) {
-            printf("[AHT20] Air Temp: %.2f C | Humidity: %.1f %%\r\n",
-            aht20.temperature_c, aht20.humidity_rh);
-        } else {
-            printf("[AHT20] ERROR: Sensor offline!\r\n");
-        }
-
-        if (bmp280.is_valid) {
-            printf("[BMP280] Pressure: %.1f hPa (%.1f mmHg)\r\n",
-            bmp280.pressure_hpa, bmp280.pressure_mmhg);
-        } else {
-            printf("[BMP280] ERROR: Sensor offline!\r\n");
-        }
-
-        if (ina219.is_valid) {
-            printf("[INA219] Load: %.2f V | %.1f mA | %.1f mW\r\n",
-           ina219.bus_voltage_v, ina219.current_ma, ina219.power_mw);
-        } else {
-            printf("[INA219] ERROR: Sensor offline!\r\n");
-        }  
+        // Контроль климата. При необходимости включаем кулер или нагреватель
+        ClimateCtrl_Update(aht20.temperature_c, aht20.is_valid, sys.analog->fan_setpoint_c, &sys_dew);
         
-        printf("\r\n");
-        printf("--------------------------------------------\r\n");
-        printf("\r\n");
+        // Обновляем динамические флаги состояния        
+        sys.access_alarm = (sys.access->state == ACCESS_STATE_ALARM);                        // Дверца открыта без идентификации
+        sys.dew_critical = (sys_dew.is_valid && sys_dew.risk == CONDENSATION_RISK_CRITICAL); // Близка точка росы        
+        sys.sensor_fault = (!aht20.is_valid || !bmp280.is_valid ||  !ina219.is_valid ||      // Один из датчиков вышел из строя
+                                          !sys.analog->is_valid || !rc522.is_valid);
 
+        // Формирование текста для экранов дисплея
+        UICtrl_Update(&lcd, &sys);
+
+        // Включение сирены при наличии внештатных ситуаций
+        AlarmCtrl_Update(&sys);
+    }
+
+    // Каждые 200 мс: опрос быстрых I2C-датчиков
+    if ((now - t_200ms) >= 200U) {
+        t_200ms = now;
+
+        AHT20_Process(&aht20);      // Датчик температуры
+        INA219_Process(&ina219);    // Датчик напряжения, потребляемого тока и мощность нагрузки (оборудования в шкафу)
+    }
+
+    // Каждые 500 мс: барометр и Heartbeat LED
+    if ((now - t_500ms) >= 500U) {
+        t_500ms = now;
+
+        BMP280_Process(&bmp280);    // Датчик атмосферного давления
+        HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); // Светодиод PA13 (Heartbeat)
+    }
+
+    // Каждые 2000 мс: вывод диагностики в UART
+    if ((now - t_2000ms) >= 2000U) {
+        t_2000ms = now;
+        LOG_INFO("T_air=%.1fC RH=%.1f%% T_dew=%.1fC T_surf=%.1fC PWM=%u",
+                 aht20.temperature_c, aht20.humidity_rh,
+                 sys_dew.dew_point_c, sys.analog->surface_temp_c, sys.climate->fan_pwm_duty);
     }
 }

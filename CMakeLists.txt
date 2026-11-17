@@ -54,7 +54,11 @@ add_executable(${CMAKE_PROJECT_NAME}
     App/Application/ui_ctrl.h
     App/Application/ui_ctrl.c
     App/Services/dew_point.h
-    App/Services/dew_point.c)
+    App/Services/dew_point.c
+    App/Services/logger.h
+    App/Services/logger.c
+    App/Application/alarm_ctrl.h
+    App/Application/alarm_ctrl.c)
 
 # Add STM32CubeMX generated sources
 add_subdirectory(cmake/stm32cubemx)

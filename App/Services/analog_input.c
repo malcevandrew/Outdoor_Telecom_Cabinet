@@ -26,24 +26,20 @@
 // Кольцевой буфер для DMA: [TEMP_0, SETPOINT_0, TEMP_1, SETPOINT_1, ...]  
 static volatile uint16_t adc_dma_buffer[ADC_DMA_BUFFER_SIZE];
 
-// Инициализация
-void AnalogInput_Init(analog_data_t *current_data)
-{
-    current_data->surface_temp_c    = 0;       
-    current_data->surface_voltage_v = 0;    
-    current_data->fan_setpoint_c    = 0;       
-    current_data->raw_temp_ch       = 0;       
-    current_data->raw_setpoint_ch   = 0;        
+static analog_data_t current_data = {0};
 
+// Инициализация
+void AnalogInput_Init(void)
+{   
     if (HAL_ADC_Start_DMA(&hadc1, (uint32_t *)adc_dma_buffer, ADC_DMA_BUFFER_SIZE) != HAL_OK) {
-        current_data->is_valid = false;
+        current_data.is_valid = false;
     } else {
-        current_data->is_valid = true;
+        current_data.is_valid = true;
     }
 }
 
 // Определение значения температуры на стенке шкафа (для проведения тестов датчик имитируем потенциометром) 
-void AnalogInput_Process(analog_data_t* current_data)
+void AnalogInput_Process(void)
 {
     uint32_t sum_temp     = 0;
     uint32_t sum_setpoint = 0;
@@ -58,23 +54,28 @@ void AnalogInput_Process(analog_data_t* current_data)
     uint16_t avg_temp     = (uint16_t)(sum_temp / ADC_SAMPLES_PER_CHANNEL);
     uint16_t avg_setpoint = (uint16_t)(sum_setpoint / ADC_SAMPLES_PER_CHANNEL);
 
-    current_data->raw_temp_ch     = avg_temp;
-    current_data->raw_setpoint_ch = avg_setpoint;
+    current_data.raw_temp_ch     = avg_temp;
+    current_data.raw_setpoint_ch = avg_setpoint;
 
     // Расчёт напряжения на канале температуры поверхности стенки шкафа  
     float voltage_temp = ((float)avg_temp / ADC_MAX_COUNTS) * ADC_VREF_VOLTS;
-    current_data->surface_voltage_v = voltage_temp;
+    current_data.surface_voltage_v = voltage_temp;
 
     // Пропорциональный перерасчет напряжения в температуру
     if (voltage_temp < SURF_TEMP_MIN_V || voltage_temp > SURF_TEMP_MAX_V) {
-        current_data->is_valid = false;
+        current_data.is_valid = false;
     } else {
-        current_data->is_valid = true;
+        current_data.is_valid = true;
         float ratio = (voltage_temp - SURF_TEMP_MIN_V) / (SURF_TEMP_MAX_V - SURF_TEMP_MIN_V);           
-        current_data->surface_temp_c = SURF_TEMP_MIN_C + ratio * (SURF_TEMP_MAX_C - SURF_TEMP_MIN_C);
+        current_data.surface_temp_c = SURF_TEMP_MIN_C + ratio * (SURF_TEMP_MAX_C - SURF_TEMP_MIN_C);
     }
 
      // Пропорциональный расчет на канале регулировки порога включения кулера в диапазоне от FAN_SETPOINT_MIN_C до FAN_SETPOINT_MAX_C 
     float setpoint_ratio = (float)avg_setpoint / ADC_MAX_COUNTS;                    // Один шаг потенциометра
-    current_data->fan_setpoint_c = FAN_SETPOINT_MIN_C + setpoint_ratio * (FAN_SETPOINT_MAX_C - FAN_SETPOINT_MIN_C);
+    current_data.fan_setpoint_c = FAN_SETPOINT_MIN_C + setpoint_ratio * (FAN_SETPOINT_MAX_C - FAN_SETPOINT_MIN_C);
+}
+
+const analog_data_t *AnalogInput_GetData(void)
+{
+    return &current_data;
 }

@@ -171,7 +171,7 @@ $T_{dew} =
 ## Схема подключения
 
 [pdf](docs/Outdoor_Telecom_Cabinet_Wiring_Diagram.pdf)  |  [jpg](img/schematic_diagram.jpg)
-[![Диаграмма подключения](img/schematic%20diagram.jpg)](docs/Outdoor_Telecom_Cabinet_Wiring_Diagram.pdf)
+[![Диаграмма подключения](img/schematic_diagram.jpg)](docs/Outdoor_Telecom_Cabinet_Wiring_Diagram.pdf)
 
 
 ## Инструменты разработки

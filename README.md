@@ -20,6 +20,9 @@
 <br>
 
 ### Структурная схема устройства
+
+[pdf](docs/Outdoor_Telecom_Cabinet_Structure.pdf)  |  [jpg](img/Structure.jpg)
+
 ```mermaid
 flowchart LR
     subgraph ENV ["Телеком. шкаф"]
@@ -41,11 +44,11 @@ flowchart LR
     end
 
     MCU["<b>STM32F411CEU6</b>"]
-
+A5["USB-UART адаптер"]
     subgraph ACTUATORS ["Исполнит. уст-ва"]
         
         A2["Реле"]
-            A5["USB-UART адаптер"]
+            
         A1["Кулер"]
         A3["Динамик"]
         A4["Дисплей LCD1602"]
@@ -163,6 +166,7 @@ $T_{dew} =
 
 ## Схема подключения
 
+[pdf](docs/Outdoor_Telecom_Cabinet_Wiring_Diagram.pdf)  |  [jpg](img/schematic%20diagram.jpg)
 [![Диаграмма подключения](img/schematic%20diagram.jpg)](docs/Outdoor_Telecom_Cabinet_Wiring_Diagram.pdf)
 
 
